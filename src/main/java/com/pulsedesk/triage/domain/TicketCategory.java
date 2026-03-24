@@ -1,0 +1,20 @@
+package com.pulsedesk.triage.domain;
+
+public enum TicketCategory {
+  INCIDENT,
+  SECURITY,
+  PERFORMANCE,
+  INTEGRATION,
+  DATA_ISSUE,
+  ACCESS_REQUEST,
+  COMPLIANCE_PRIVACY,
+  CONTENT_ABUSE,
+  UX_USABILITY,
+  QUESTION_SUPPORT,
+  BUG,
+  FEATURE,
+  BILLING,
+  ACCOUNT,
+  OTHER
+}
+

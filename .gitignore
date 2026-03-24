@@ -1,0 +1,44 @@
+# Local secrets and environment (always exclude from git)
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+target/
+build/
+dist/
+
+# IDE and editor metadata
+.idea/
+*.iml
+.vscode/local.settings.json
+*.swp
+*.swo
+*~
+
+# Runtime data
+data/
+*.db
+*.h2.db
+
+# Python virtual env (if used for scripts)
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+*.log.*
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+.classpath
+.project
+.settings/
+
+# Maven wrapper
+.mvn/wrapper/maven-wrapper.jar
+

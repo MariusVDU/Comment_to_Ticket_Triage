@@ -1,0 +1,49 @@
+server:
+  port: 8080
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 20
+    max-connections: 8192
+    accept-count: 200
+
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: jdbc:h2:file:./data/pulsedesk;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driverClassName: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  h2:
+    console:
+      enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info"
+
+pulsedesk:
+  huggingface:
+    base-url: ${HUGGINGFACE_BASE_URL:https://router.huggingface.co/hf-inference}
+    model: ${HUGGINGFACE_MODEL:mistralai/Mistral-7B-Instruct-v0.2}
+    timeout-ms: ${HUGGINGFACE_TIMEOUT_MS:25000}
+    api-token: ${HUGGINGFACE_API_TOKEN:}
+  processing:
+    poll-delay-ms: 250
+    retry-max-attempts: 3
+    retry-delay-ms: 10000
+  rate-limit:
+    requests-per-window: 60
+    window-seconds: 60
+

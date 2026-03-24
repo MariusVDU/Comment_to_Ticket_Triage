@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PulseDesk Triage</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #101a2e;
+      --text: #e6ecff;
+      --muted: #9fb0d6;
+      --accent: #5da3ff;
+      --ok: #2fbf71;
+      --warn: #f7b500;
+      --err: #ff6b6b;
+      --border: #273553;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    .sub { color: var(--muted); margin-bottom: 20px; }
+    .grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 1.1fr 1fr;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    label {
+      display: block;
+      margin: 10px 0 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    input, textarea, button {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0b1426;
+      color: var(--text);
+      padding: 10px;
+      font-size: 14px;
+    }
+    textarea { min-height: 120px; resize: vertical; }
+    button {
+      margin-top: 12px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.7; cursor: not-allowed; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .status {
+      margin-top: 10px;
+      min-height: 20px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .tables {
+      margin-top: 16px;
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 1fr;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      padding: 8px 6px;
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 600; }
+    .pill {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-weight: 600;
+      background: #1f2f4d;
+      border: 1px solid var(--border);
+    }
+    .pill.ok { color: var(--ok); }
+    .pill.warn { color: var(--warn); }
+    .pill.err { color: var(--err); }
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+      .row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>PulseDesk Comment Triage</h1>
+    <div class="sub">Submit comments and monitor asynchronous ticket triage in real time.</div>
+    <div class="grid">
+      <section class="card">
+        <h3>New Comment</h3>
+        <label for="text">Comment text</label>
+        <textarea id="text" maxlength="8000" placeholder="Describe issue, request, or feedback"></textarea>
+        <div class="row">
+          <div>
+            <label for="source">Source</label>
+            <input id="source" maxlength="64" placeholder="web, email, app-store..." />
+          </div>
+          <div>
+            <label for="author">Author</label>
+            <input id="author" maxlength="128" placeholder="user@example.com" />
+          </div>
+        </div>
+        <label for="externalRef">External reference</label>
+        <input id="externalRef" maxlength="256" placeholder="e.g. zendesk:12345" />
+        <button id="submitBtn">Submit comment</button>
+        <div class="status" id="submitStatus"></div>
+      </section>
+      <section class="card">
+        <h3>How it works</h3>
+        <ul>
+          <li>`POST /comments` stores quickly and returns <code>PENDING</code>.</li>
+          <li>Background worker analyzes via Hugging Face.</li>
+          <li>If analysis decides it is actionable, a ticket is created automatically.</li>
+          <li>If AI is unavailable, the heuristic fallback keeps triage running.</li>
+        </ul>
+      </section>
+    </div>
+    <div class="tables">
+      <section class="card">
+        <h3>Comments (latest 20)</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>Text</th><th>Source</th><th>Author</th><th>Status</th><th>Reason</th><th>Ticket</th><th>Created</th>
+            </tr>
+          </thead>
+          <tbody id="commentsBody"></tbody>
+        </table>
+      </section>
+      <section class="card">
+        <h3>Tickets (latest 20)</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>Title</th><th>Source</th><th>Author</th><th>Category</th><th>Priority</th><th>Summary</th><th>Comment ID</th>
+            </tr>
+          </thead>
+          <tbody id="ticketsBody"></tbody>
+        </table>
+      </section>
+    </div>
+  </div>
+  <script>
+    const commentsBody = document.getElementById("commentsBody");
+    const ticketsBody = document.getElementById("ticketsBody");
+    const submitBtn = document.getElementById("submitBtn");
+    const submitStatus = document.getElementById("submitStatus");
+    const textEl = document.getElementById("text");
+    const sourceEl = document.getElementById("source");
+    const authorEl = document.getElementById("author");
+    const externalRefEl = document.getElementById("externalRef");
+    function esc(value) {
+      return (value ?? "").toString()
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+    function formatStatus(status) {
+      if (status === "ANALYZED") return '<span class="pill ok">ANALYZED</span>';
+      if (status === "RETRYING") return '<span class="pill warn">RETRYING</span>';
+      if (status === "FAILED") return '<span class="pill err">FAILED</span>';
+      return '<span class="pill warn">PENDING</span>';
+    }
+    function clip(text, max) {
+      if (!text) return "";
+      return text.length > max ? `${text.slice(0, max)}...` : text;
+    }
+    function formatDateTime(value) {
+      if (!value) return "-";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return value;
+      const pad2 = (n) => String(n).padStart(2, "0");
+      const yyyy = d.getFullYear();
+      const mm = pad2(d.getMonth() + 1);
+      const dd = pad2(d.getDate());
+      const hh = pad2(d.getHours());
+      const mi = pad2(d.getMinutes());
+      const ss = pad2(d.getSeconds());
+      return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+    }
+    async function loadComments() {
+      const res = await fetch("/comments?page=0&size=20");
+      const data = await res.json();
+      const items = data.content ?? [];
+      commentsBody.innerHTML = items.map(c => `
+        <tr>
+          <td>${c.id}</td>
+          <td title="${esc(c.text)}">${esc(clip(c.text, 140))}</td>
+          <td>${esc(c.source || "-")}</td>
+          <td>${esc(c.author || "-")}</td>
+          <td>${formatStatus(c.analysisStatus)}</td>
+          <td title="${esc(c.analysisReason)}">${esc(clip(c.analysisReason, 80))}</td>
+          <td>${c.ticketId ? `<a href="/tickets/${c.ticketId}" target="_blank">${c.ticketId}</a>` : "-"}</td>
+          <td>${esc(formatDateTime(c.createdAt))}</td>
+        </tr>
+      `).join("");
+    }
+    async function loadTickets() {
+      const res = await fetch("/tickets?page=0&size=20");
+      const data = await res.json();
+      const items = data.content ?? [];
+      ticketsBody.innerHTML = items.map(t => `
+        <tr>
+          <td>${t.id}</td>
+          <td>${esc(t.title)}</td>
+          <td>${esc(t.source || "-")}</td>
+          <td>${esc(t.author || "-")}</td>
+          <td>${esc(t.category)}</td>
+          <td>${esc(t.priority)}</td>
+          <td title="${esc(t.summary)}">${esc(clip(t.summary, 120))}</td>
+          <td>${t.commentId}</td>
+        </tr>
+      `).join("");
+    }
+    async function refreshAll() {
+      try {
+        await Promise.all([loadComments(), loadTickets()]);
+      } catch (e) {
+        console.error("Refresh failed", e);
+      }
+    }
+    async function submitComment() {
+      const text = textEl.value.trim();
+      if (!text) {
+        submitStatus.textContent = "Comment text is required.";
+        return;
+      }
+      submitBtn.disabled = true;
+      submitStatus.textContent = "Submitting...";
+      try {
+        const payload = {
+          text,
+          source: sourceEl.value.trim() || null,
+          author: authorEl.value.trim() || null,
+          externalRef: externalRefEl.value.trim() || null
+        };
+        const res = await fetch("/comments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          submitStatus.textContent = `Failed (${res.status}): ${err.message || "Unable to submit comment"}`;
+          return;
+        }
+        const created = await res.json();
+        submitStatus.textContent = `Comment #${created.id} received. Analysis queued.`;
+        textEl.value = "";
+        externalRefEl.value = "";
+        await refreshAll();
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }
+    submitBtn.addEventListener("click", submitComment);
+    refreshAll();
+    setInterval(refreshAll, 3000);
+  </script>
+</body>
+</html>
