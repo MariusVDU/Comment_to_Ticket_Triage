@@ -46,7 +46,8 @@ public class TicketController {
   }
 
   private TicketResponse toResponseWithCommentContext(TicketEntity t) {
-    CommentEntity comment = comments.findById(t.getCommentId()).orElse(null);
+    Long commentId = t.getCommentId();
+    CommentEntity comment = commentId != null ? comments.findById(commentId).orElse(null) : null;
     String source = comment == null ? null : comment.getSource();
     String author = comment == null ? null : comment.getAuthor();
     return ApiMappers.toResponse(t, source, author);

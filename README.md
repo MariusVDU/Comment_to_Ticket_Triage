@@ -15,7 +15,7 @@ For full technical and architecture documentation, see [SYSTEM_DOCUMENTATION.md]
 
 Create a `.env.local` file in the project root folder:
 
-```
+```dotenv
 HUGGINGFACE_API_TOKEN=hf_...
 HUGGINGFACE_MODEL=openai/gpt-oss-20b:novita
 HUGGINGFACE_BASE_URL=https://router.huggingface.co/hf-inference
@@ -49,7 +49,6 @@ Open `http://localhost:8080` in your browser, fill in the form, and submit a com
 - `GET /comments?page=0&size=20`
 - `GET /tickets?page=0&size=20`
 - `GET /tickets/{ticketId}`
-
 
 ## Common Configuration
 

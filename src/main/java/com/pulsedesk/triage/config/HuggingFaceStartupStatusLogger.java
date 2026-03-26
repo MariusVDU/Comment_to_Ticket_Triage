@@ -30,6 +30,6 @@ public class HuggingFaceStartupStatusLogger {
 
     log.warn(
         "Hugging Face analyzer DISABLED: pulsedesk.huggingface.api-token is empty. "
-            + "Set HUGGINGFACE_API_TOKEN in environment or .env and restart the app.");
+            + "Set HUGGINGFACE_API_TOKEN in environment or .env.local and restart the app.");
   }
 }
